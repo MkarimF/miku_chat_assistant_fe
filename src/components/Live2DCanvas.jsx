@@ -7,8 +7,10 @@ function Live2DCanvas() {
   const modelRef = useRef(null);
   const motionRef = useRef(null);
   useEffect(() => {
-    if (!containerRef.current) return;
 
+
+    if (!containerRef.current) return;
+    
     const app = new PIXI.Application({
       backgroundAlpha: 1,
       resizeTo: window,
@@ -17,12 +19,30 @@ function Live2DCanvas() {
 
     containerRef.current.appendChild(app.view);
 
+    const handleStartTalking = () => {
+      if (!modelRef.current) return;
+
+      // const motion = modelRef.current.motion("/miku/runtime/motions/miku_07.motion.json");
+      // motion.motion("Lipsync",0).start()
+      // motion.loop = true;
+      // motion.start();
+      // motionRef.current = motion;
+      // motion.motionManager.stopAllMotions();
+    };
+    const handleStopTalking = () => {
+      if (motionRef.current) {
+        motionRef.current.motionManager?.stopAllMotions();
+        // motionRef.current.stop();
+        // motionRef.current = null;
+      }
+    };
     Live2DModel.from("/miku/runtime/miku.model3.json")
       .then((model) => {
+        modelRef.current = model;
         model.autoUpdate = false;
-        model.scale.set(0.25);
+        model.scale.set(0.5, 0.5);
         model.anchor.set(0.5, 0.5);
-        model.position.set(window.innerWidth / 2, window.innerHeight / 2-150);
+        model.position.set(window.innerWidth / 2-10, window.innerHeight / 2-150);
         app.stage.addChild(model);
 
         app.ticker.add((delta) => {
@@ -31,40 +51,19 @@ function Live2DCanvas() {
       })
       .catch((e) => {
         console.error("❌ Gagal load model:", e);
-      });
-
-    return () => {
-      app.destroy(true, { children: true });
-    };
+      })
+      
+    window.addEventListener("miku:startTalking", handleStartTalking);
+    window.addEventListener("miku:stopTalking", handleStopTalking);
+      return () => {
+        window.removeEventListener("miku:startTalking", handleStartTalking);
+        window.removeEventListener("miku:stopTalking", handleStopTalking);        
+        app.destroy(true, { children: true });
+      };
   }, []);
-   const startTalkingMotion = () => {
-    if (!modelRef.current) return;
-    const motion = modelRef.current.motion("talk");
-    motion.loop = true;
-    motion.start();
-    motionRef.current = motion;
-  };
-
-  const stopTalkingMotion = () => {
-    if (motionRef.current) {
-      motionRef.current.stop();
-      motionRef.current = null;
-    }
-  };
-
-  // Contoh integrasi dengan TTS
-  const playTTS = (url) => {
-    const audio = new Audio(url);
-    startTalkingMotion();
-    audio.play();
-    audio.onended = () => {
-      stopTalkingMotion();
-    };
-  };
 
   return (
     <>
-      <button onClick={() => playTTS("/audio/wav")}>Play Voice</button>
       <div ref={containerRef} className="w-full h-full"></div>
     </>
   );
